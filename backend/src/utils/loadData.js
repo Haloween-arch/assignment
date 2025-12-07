@@ -1,36 +1,37 @@
-// src/utils/loadCSV.js (or similar)
+// backend/src/utils/loadData.js
 
 const axios = require("axios");
 const csv = require("csv-parser");
 const { normalizeRow } = require("./normalizeRow");
 
 const CSV_URL =
+  process.env.CSV_URL ||
   "https://github.com/Mallika-Rajpal/TruEstate-full-stack-assignment/releases/download/v1/sales.csv";
 
-// In-memory cache for normalized sales data
+// limit rows to stay within Render's 512Mi memory
+const MAX_ROWS = Number(process.env.MAX_ROWS || 50000);
+
 let salesData = null;
-// Promise to avoid loading the CSV multiple times in parallel
 let loadingPromise = null;
 
 /**
- * Stream and load CSV from GitHub Releases.
- * - Normalizes each row
- * - Caches the result in memory
- * - Is safe to call multiple times (will reuse the same promise/cache)
+ * Download + stream CSV from GitHub, normalize rows, and cache in memory.
+ * Uses a MAX_ROWS cap to avoid exhausting memory on Render.
  */
 async function loadCSV() {
-  // If already loaded, nothing to do
+  // already loaded
   if (salesData && Array.isArray(salesData) && salesData.length > 0) {
     return;
   }
 
-  // If already loading, reuse the same promise
+  // already loading, reuse the same promise
   if (loadingPromise) {
     return loadingPromise;
   }
 
   console.log("📥 CSV Source:", CSV_URL);
   console.log("⬇️ Streaming CSV from:", CSV_URL);
+  console.log(`📊 MAX_ROWS = ${MAX_ROWS}`);
 
   loadingPromise = new Promise(async (resolve, reject) => {
     try {
@@ -42,21 +43,26 @@ async function loadCSV() {
         responseType: "stream",
       });
 
-      response.data
-        .pipe(csv())
-        .on("data", (row) => {
-          rows.push(normalizeRow(row));
+      const stream = response.data.pipe(csv());
+
+      stream
+        .on("data", (raw) => {
+          if (rows.length < MAX_ROWS) {
+            rows.push(normalizeRow(raw));
+          } else {
+            // we've reached the limit; stop reading more data
+            response.data.destroy();
+          }
         })
         .on("end", () => {
           salesData = rows;
           console.log(
-            `✅ Loaded ${salesData.length.toLocaleString()} rows of sales data`
+            `✅ Loaded ${salesData.length.toLocaleString()} rows of sales data (capped by MAX_ROWS)`
           );
           resolve();
         })
         .on("error", (err) => {
           console.error("❌ CSV stream error:", err);
-          // reset promise so we can retry on next server start if needed
           loadingPromise = null;
           reject(err);
         });
@@ -70,10 +76,6 @@ async function loadCSV() {
   return loadingPromise;
 }
 
-/**
- * Get the loaded, normalized sales data.
- * Make sure `loadCSV()` has been awaited during server startup.
- */
 function getSalesData() {
   if (!salesData) {
     console.warn("⚠️ getSalesData called before CSV finished loading.");
