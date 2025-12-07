@@ -1,7 +1,8 @@
-const BASE_URL = "https://assignment-j50b.onrender.com";
+// src/services/api.js
+import axios from "axios";
 
-export async function fetchSales(params) {
-  const query = new URLSearchParams(params).toString();
-  const res = await fetch(`${BASE_URL}/api/sales?${query}`);
-  return res.json();
-}
+const api = axios.create({
+  baseURL: "https://assignment-j50b.onrender.com/api", // 🔥 deployed backend
+});
+
+export default api;
