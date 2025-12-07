@@ -9,8 +9,15 @@ function normalizeRow(raw) {
     const totalAmount = Number(raw["Total Amount"] || 0);
     const finalAmount = Number(raw["Final Amount"] || 0);
     const age = Number(raw["Age"] || 0);
+
+    const transactionId =
+    raw["Transaction ID"] ||
+    raw["Transaction Id"] ||
+    raw["transaction_id"] ||
+    null;
   
     return {
+      transactionId,
       customerId: raw["Customer ID"] || null,
       customerName: raw["Customer Name"] || "",
       phoneNumber: raw["Phone Number"] || "",
