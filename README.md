@@ -56,5 +56,5 @@ cd frontend
 npm install
 npm run dev
 ```
-#### Access the application at the URL printed by the frontend (typically http://localhost:5173)
+#### Access the application at the URL printed by the frontend (https://assignment-gamma-nine-64.vercel.app/)
 
