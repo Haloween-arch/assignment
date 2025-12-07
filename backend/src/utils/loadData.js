@@ -8,7 +8,7 @@ const CSV_URL =
   process.env.CSV_URL ||
   "https://github.com/Mallika-Rajpal/TruEstate-full-stack-assignment/releases/download/v1/sales.csv";
 
-// limit rows to stay within Render's 512Mi memory
+// Limit rows to stay within Render's 512Mi memory
 const MAX_ROWS = Number(process.env.MAX_ROWS || 50000);
 
 let salesData = null;
@@ -19,12 +19,12 @@ let loadingPromise = null;
  * Uses a MAX_ROWS cap to avoid exhausting memory on Render.
  */
 async function loadCSV() {
-  // already loaded
+  // Already loaded
   if (salesData && Array.isArray(salesData) && salesData.length > 0) {
     return;
   }
 
-  // already loading, reuse the same promise
+  // Already loading, reuse the same promise
   if (loadingPromise) {
     return loadingPromise;
   }
@@ -43,16 +43,14 @@ async function loadCSV() {
         responseType: "stream",
       });
 
-      const stream = response.data.pipe(csv());
-
-      stream
+      response.data
+        .pipe(csv())
         .on("data", (raw) => {
+          // Only store up to MAX_ROWS in memory
           if (rows.length < MAX_ROWS) {
             rows.push(normalizeRow(raw));
-          } else {
-            // we've reached the limit; stop reading more data
-            response.data.destroy();
           }
+          // extra rows beyond MAX_ROWS are just read and ignored
         })
         .on("end", () => {
           salesData = rows;
